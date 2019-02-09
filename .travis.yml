@@ -1,0 +1,21 @@
+language: cpp
+sudo: required
+before_script:
+  - ls
+  - git clone https://github.com/Microsoft/vcpkg.git vcpkg
+  - cd vcpkg
+  - ./bootstrap-vcpkg.sh
+  - ./vcpkg integrate install
+  - ./vcpkg install range-v3
+  - ls
+  - pwd
+  - export VCPKG_ROOT=`pwd`
+script:
+  - cmake .
+  - cmake --build .
+  - cmake --build . --target package
+deploy:
+  provider: script
+  skip_cleanup: true
+  script:
+    - curl -T range-0.0.$TRAVIS_BUILD_NUMBER-Linux.deb -ukafeg:$BINTRAY_API_KEY "https://api.bintray.com/content/kafeg/otus/homeworks/$TRAVIS_BUILD_NUMBER/range-0.0.$TRAVIS_BUILD_NUMBER-Linux.deb;deb_distribution=trusty;deb_component=main;deb_architecture=amd64;publish=1"
