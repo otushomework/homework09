@@ -32,7 +32,12 @@ auto split(const std::string &str, char d)
     return r;
 }
 
-//$ ip_filter < ip_filter.tsv
+auto getOctet(const IpAddressInt &ip, const int pos)
+{
+    return (ip >> (8*pos)) & 0xff;
+}
+
+//$ range < range.tsv
 int main(int, char const *[])
 {
     try
@@ -49,51 +54,36 @@ int main(int, char const *[])
         }
 
         // reverse lexicographical sort
-        std::sort( ip_pool.begin(), ip_pool.end(), std::greater<IpAddressInt>() );
+        ranges::sort( ip_pool, std::greater<IpAddressInt>() );
 
-        auto printer = [&](const Filter filter){
-            for(std::vector<IpAddressInt>::const_iterator ip = ip_pool.cbegin(); ip != ip_pool.cend(); ++ip)
+        auto printTransformed = [](const IpAddressInt &ip)
+        {
+            std::string buffer;
+            for (int i = 3; i >= 0; --i)
             {
-                FilterRes filterRes;
-
-                std::string buffer;
-                for (int i = 3; i >= 0; --i)
-                {
-                    int distance = filter.find( -1 ) != filter.end() ? -1 : 3-i;
-
-                    unsigned char octet = (*ip >> (8*i)) & 0xff;
-
-                    if ( filter.find( distance ) != filter.end() )
-                    {
-                        filterRes.insert(std::pair<int, bool>(3-i, octet == filter.at(distance)));
-                    }
-
-                    if (i != 3)
-                        buffer.append(".");
-
-                    buffer.append(std::to_string(octet));
-                }
-
-                //print if we have equals
-                bool match = true;
-                for (FilterRes::const_iterator fi = filterRes.cbegin(); fi != filterRes.cend(); ++fi)
-                {
-                    match = fi->second;
-
-                    if ( (filter.find( -1 ) == filter.end() && !match) || (filter.find( -1 ) != filter.end() && match) )
-                        break;
-                }
-
-                if (match)
-                    std::cout << buffer << std::endl;
+                if (i != 3) buffer.append(".");
+                buffer.append(std::to_string(getOctet(ip, i)));
             }
+            std::cout << buffer << std::endl;
         };
 
-        // simple filter
-        printer(Filter{});
-        printer(Filter{{0, 1}});
-        printer(Filter{{0, 46}, {1, 70}});
-        printer(Filter{{-1, 46}});
+        auto printRange = [&]( bool (*filter)(IpAddressInt) )
+        {
+            auto res = ip_pool | ranges::view::remove_if( filter );
+
+            ranges::for_each(res, printTransformed);
+        };
+
+        printRange([](IpAddressInt) -> bool { return false; });
+        printRange([](IpAddressInt ip) -> bool { return getOctet(ip, 3) != 1; });
+        printRange([](IpAddressInt ip) -> bool { return getOctet(ip, 3) != 46 || getOctet(ip, 2) != 70; });
+        printRange([](IpAddressInt ip) -> bool {
+            for (int i = 3; i >= 0; --i)
+            {
+                if (getOctet(ip, i) == 46) return false;
+            }
+            return true;
+        });
     }
     catch(const std::exception &e)
     {
