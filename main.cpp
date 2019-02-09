@@ -7,11 +7,8 @@
 #include <algorithm>
 #include <range/v3/all.hpp>
 
-
 using IpAddressStr = std::vector<std::string>;
 using IpAddressInt = unsigned int;
-using Filter = std::map<int, int>;
-using FilterRes = std::map<int, bool>;
 
 auto split(const std::string &str, char d)
 {
