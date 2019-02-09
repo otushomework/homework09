@@ -17,6 +17,7 @@ before_script:
   - ls
   - pwd
   - export VCPKG_ROOT=`pwd`
+  - cd ..
 script:
   - cmake .
   - cmake --build .
